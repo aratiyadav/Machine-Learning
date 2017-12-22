@@ -1,0 +1,139 @@
+#READING The DATA
+votes<-read.table("/Users/Arati/Documents/UIS/SPRING2017/houseVotes.txt", sep=",", header = FALSE)
+#REPLACING THE MISSING VALUES
+value1 <- "n"
+value2 <- "y"
+table(votes$V1)
+table(votes$V2)
+table(votes$V3)
+table(votes$V4)
+table(votes$V5)
+table(votes$V6)
+table(votes$V7)
+table(votes$V8)
+table(votes$V9)
+table(votes$V10)
+table(votes$V11)
+table(votes$V12)
+table(votes$V13)
+table(votes$V14)
+table(votes$V15)
+table(votes$V16)
+table(votes$V17)
+votes$V2[votes$V2 == "?"] <- value1
+votes$V3[votes$V3 == "?"] <- value2
+votes$V4[votes$V4 == "?"] <- value2
+votes$V5[votes$V5 == "?"] <- value1
+votes$V6[votes$V6 == "?"] <- value2
+votes$V7[votes$V7 == "?"] <- value2
+votes$V8[votes$V8 == "?"] <- value2
+votes$V9[votes$V9 == "?"] <- value2
+votes$V10[votes$V10 == "?"] <- value2
+votes$V11[votes$V11 == "?"] <- value2
+votes$V12[votes$V12 == "?"] <- value1
+votes$V13[votes$V13 == "?"] <- value1
+votes$V14[votes$V14 == "?"] <- value2
+votes$V15[votes$V15 == "?"] <- value2
+votes$V16[votes$V16 == "?"] <- value1
+votes$V17[votes$V17 == "?"] <- value2
+
+#APPLYING DECISION TREE ON VOTES DATASET
+library(C50)
+library(gmodels)
+votes_DecisionTreeModel <- C5.0(votes[-1], votes$V1)
+votes_train <- votes[1:390,]
+votes_test <- votes[391:435, ]
+votes_predict <- predict(votes_DecisionTreeModel, votes_test)
+CrossTable(votes_test$V1, votes_predict, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn = c('actual default', 'predicted default'))
+predicted_probability <- predict(votes_DecisionTreeModel, votes_test, type ="prob")
+
+#APPLYING NAIVE BAYES ON VOTES DATASET
+library(tm)
+library(SnowballC)
+library(e1071)
+votesFile <- votes
+votesFile$V1 <- factor(votesFile$V1)
+//Dividing the test and train data
+VotesFile_train <- votesFile[1:335, ]
+VotesFile_test <- votesFile[336:435, ]
+//Defining the test and train labels
+votesFile_train_labels <- votesFile[1:335, ]$V1
+votesFile_test_labels <- votesFile[336:435, ]$V1
+votesFile_classifier <- naiveBayes(VotesFile_train, votesFile_train_labels)
+votesFile_test_predictions <- predict(votesFile_classifier, VotesFile_test)
+votesFile_test_probability <- predict(votesFile_classifier, VotesFile_test, type = "raw")
+CrossTable(votesFile_test_predictions, votesFile_test_labels, prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE, dnn = c('actual default', 'predicted default'))
+head(votesFile_test_probability)
+
+#CROSS VALIDATION
+library(caret)
+library(irr)
+folds <- createFolds(votes$V1, k = 10)
+votes_test <- votes[folds$Fold01, ]
+votes_train <- votes[-folds$Fold01, ]
+
+#CROSS VALIDATION ON THE DECISION TREE
+decision_tree_CVresults<- lapply(folds, function(x) {
+votes_train <- votes[-x, ]
+votes_test <- votes[x, ]
+votes_model <- C5.0(V1 ~ ., data = votes_train)
+votes_pred <- predict(votes_model, votes_test)
+votes_actual <- votes_test$V1
+kappa <- kappa2(data.frame(votes_actual, votes_pred))$value
+return(kappa)
+})
+mean(unlist(decision_tree_CVresults))
+
+#CROSS VALIDATION ON THE NAIVE BAYES
+naiveBayes_CVresults<- lapply(folds, function(x) {
+votes_train <- votes[-x, ]
+votes_test <- votes[x, ]
+votes_model <- naiveBayes(V1 ~ ., data = votes_train)
+votes_pred <- predict(votes_model, votes_test)
+votes_actual <- votes_test$V1
+kappa <- kappa2(data.frame(votes_actual, votes_pred))$value
+return(kappa)
+})
+mean(unlist(naiveBayes_CVresults))
+
+#AUTOMATED PARAMETER TUNING
+#DECISION TREE
+set.seed(1)
+decisionTree <- train(V1 ~ ., data = votes, method = "C5.0")
+decisionTree$finalModel
+plot(decisionTree)
+p <- predict(decisionTree, votes)
+table(p, votes$V1)
+head(predict(decisionTree, votes, type = "prob"))
+
+#NAIVE BAYES
+library(klaR)
+set.seed(1)
+naiveBayes <- train(V1 ~ ., data = votes, method = "nb")
+naiveBayes$finalModel
+plot(naiveBayes)
+p <- predict(naiveBayes, votes)
+table(p, votes$V1)
+head(predict(naiveBayes, votes, type = "prob"))
+
+#ENSEMBLE LEARNING - BAGGING
+library(ipred)
+library(kernlab)
+
+#DECISION TREE
+library(randomForest)
+str(ctreeBag)
+bagctrl <- bagControl(fit = ctreeBag$fit,predict = ctreeBag$pred,aggregate = ctreeBag$aggregate)
+set.seed(123)
+ctrl <-trainControl(method = "cv", number = 10)
+ctreebag <- train(V1 ~ ., data = votes , trControl = ctrl, bagControl = bagctrl)
+ctreebag
+
+#NAIVE BAYES
+str(nbBag)
+bagctrl <- bagControl(fit = nbBag$fit,predict = nbBag$pred,aggregate = nbBag$aggregate)
+set.seed(1)
+ctrl <-trainControl(method = "cv", number = 10)
+nbbag <- train(V1 ~ ., data = votes, "bag",trControl = ctrl, bagControl = bagctrl)
+nbbag
+
