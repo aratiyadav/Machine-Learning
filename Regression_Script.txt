@@ -1,0 +1,55 @@
+library(ggplot2)
+library(corrplot)
+library(psych)
+
+#Ques1
+boston <- read.csv("/Users/Arati/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment4/Boston.csv")
+
+boston<-boston[-(1)]
+
+#Ques2
+boston[boston$medv == max(boston$medv),]
+
+medv_Hist <- ggplot(boston, aes(medv))
+
+medv_Hist + geom_histogram(aes(y = ..density.., fill = ..count..) , colour = 'white', bins = 25) + geom_density()
+
+ggplot(data = boston, aes(x=medv, y=crim)) + geom_point()
+ggplot(data = boston, aes(x=medv, y=ptratio)) + geom_point()
+
+summary(boston$crim)
+summary(boston$ptratio)
+
+#Ques3
+table(boston$chas)
+
+#Ques4
+bostonLM = lm(medv ~ ., data = boston)
+
+
+#Ques5
+boston1 <- lm(formula = log(medv) ~ crim + chas + nox + rm + dis + ptratio +  black + lstat, data = boston)
+
+#Ques7
+B<-cor(boston)
+corrplot(B, method='circle')
+corrplot(B, method='number')
+
+pairs.panels(boston[c("crim", "ptratio", "chas", "nox", "medv")])
+pairs.panels(boston[c("rm", "dis", "ptratio", "black", "lstat" ,"medv")])
+
+#Ques8 
+boston4 <- lm(formula = log(medv) ~ rm + lstat + ptratio + crim + age, data = boston)
+
+#Ques9
+boston2 <- lm(formula = log(medv) ~ rm + ptratio + lstat*black, data = boston)
+boston3 <- lm(formula = log(medv) ~ rm*lstat + ptratio + black, data = boston)
+boston5 <- lm(formula = log(medv) ~ rm*age*lstat + ptratio + black, data = boston)
+boston6 <- lm(formula = log(medv) ~ crim*black*age + ptratio + lstat*age*rm, data = boston)
+
+# R^2 > 77
+
+boston6 <- lm(formula = log(medv) ~ crim*black*age + ptratio + lstat*age*rm, data = boston)
+
+
+savehistory("~/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment4/Script1.txt")
