@@ -1,0 +1,87 @@
+# QUES1 & QUES 2
+auto <- read.csv("/Users/Arati/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment1/Auto.csv", header = TRUE, stringsAsFactors = FALSE)
+str(auto)
+
+# QUES 3 Convert the attribute horsepower from character to integer.
+auto$horsepower <- as.integer(auto$horsepower)
+
+# QUES 4: The horsepower attribute has some missing values. Remove the observations with missing values, i.e., delete the rows with missing values from the data frame.
+
+auto <- auto[complete.cases(auto), ]
+
+
+#QUES 5
+
+library(ggplot2)
+library(corrplot)
+ggplot(auto, aes(x=cylinders, y=mpg, color=cylinders)) + geom_bar(stat="identity")
+ggplot(auto, aes(x=displacement, y=mpg, color=displacement)) + geom_point()
+ggplot(auto, aes(x=horsepower, y=mpg, color=horsepower)) + geom_point()
+ggplot(auto, aes(x=weight, y=mpg, color=weight)) + geom_point()
+ggplot(auto, aes(x=acceleration, y=mpg, color=acceleration)) + geom_point()
+ggplot(auto, aes(x=year, y=mpg, color=year)) + geom_point()
+ggplot(auto, aes(x=origin, y=mpg, color=origin)) + geom_point()
+ggplot(auto, aes(x=name, y=mpg)) + geom_text(aes(label=name))
+
+auto_corr <- subset(auto, select=-name)
+M <- cor(auto_corr)
+corrplot(M, method="circle")
+
+# QUES 6 : Create a new attribute mpg1 that contains 1 if mpg is strictly greater than its median, and 0 if mpg is equal or less than its median.
+auto$mpg1[auto$mpg <= mean(auto$mpg)] <- 0
+auto$mpg1[auto$mpg > mean(auto$mpg)] <- 1
+
+# QUES 7: Decide which attributes you are going to use to predict mpg1. Remove all remaining attributes, including mpg.
+
+auto_new <- subset(auto, select=-mpg)
+auto_new <- subset(auto_new, select=-name)
+
+library(corrplot)
+M <- cor(auto_new)
+corrplot(M, method="circle")
+
+
+# QUES 8: Set the seed of the random number generator to a fixed integer, say 1, so that you can reproduce your work:
+set.seed(1)
+
+# QUES 9: Normalize the attribute values
+
+normalize <- function(x){ return ((x - min(x)) / (max(x) - min(x))) }
+auto_normalize <- as.data.frame(lapply(auto_new[1:8], normalize))
+
+
+# QUES 10 Randomize the order of the rows in the dataset
+auto_normalize <- auto_normalize[sample(1:nrow(auto_normalize)), ]
+
+
+# QUES 11: Split the data into a training set and a test set. Use a test set of 100 rows.
+str(auto_normalize)
+
+auto_train <- auto_normalize[1:292,]
+auto_test <- auto_normalize[293:392, ]
+
+auto_train <- subset(auto_train, select= -mpg1)
+auto_test <- subset(auto_test, select= -mpg1)
+
+
+# QUES 12 Perform kNN on the training data, with several values of K, in order to predict mpg1. What test errors do you obtain? Which value of K seems to perform the best on this data set?
+
+auto_train_labels <-auto_normalize[1:292,8]
+auto_test_labels <-auto_normalize[293:392,8]
+
+library(class)
+library(gmodels)
+
+auto_test_pred <- knn(train = auto_train, test = auto_test, cl = auto_train_labels, k = 17)
+CrossTable(x = auto_test_labels, y = auto_test_pred, prop.chisq=FALSE)
+auto_test_pred <- knn(train = auto_train, test = auto_test, cl = auto_train_labels, k = 2)
+CrossTable(x = auto_test_labels, y = auto_test_pred, prop.chisq=FALSE)
+auto_test_pred <- knn(train = auto_train, test = auto_test, cl = auto_train_labels, k = 10)
+> CrossTable(x = auto_test_labels, y = auto_test_pred, prop.chisq=FALSE)
+auto_test_pred <- knn(train = auto_train, test = auto_test, cl = auto_train_labels, k = 10)
+CrossTable(x = auto_test_labels, y = auto_test_pred, prop.chisq=FALSE)
+auto_test_pred <- knn(train = auto_train, test = auto_test, cl = auto_train_labels, k = 15)
+CrossTable(x = auto_test_labels, y = auto_test_pred, prop.chisq=FALSE)
+
+
+savehistory("~/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment1/Script.txt")
