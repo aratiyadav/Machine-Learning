@@ -1,0 +1,97 @@
+#LOADING REQUIRED LIBRARIES
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(e1071)
+library(gmodels)
+
+#PREPARING TRAINING AND TEST DATASET
+ham_train  <-VCorpus(DirSource("/Users/Arati/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment2/train/ham"))
+spam_train <-VCorpus(DirSource("/Users/Arati/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment2/train/spam"))
+ham_test   <-VCorpus(DirSource("/Users/Arati/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment2/test/ham"))
+spam_test  <-VCorpus(DirSource("/Users/Arati/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment2/test/spam"))
+train <- c(ham_train, spam_train)
+test  <- c(ham_test, spam_test)
+
+#CREATE A VECTOR OF LABELS FOR TRAINING AND TEST DATA SET
+#TRAIN
+l <- c(rep("ham",340), rep("spam", 123))
+l <- factor(l)
+#TEST
+l2 <- c(rep("ham",348), rep("spam", 130))
+l2 <- factor(l2)
+
+#DATA CLEANING TRAINING AND TEST DATASET
+#TRAIN
+train_clean <- tm_map(train, content_transformer(tolower))
+train_clean <- tm_map(train_clean, removeNumbers)
+train_clean <- tm_map(train_clean, removeWords, stopwords())
+train_clean <- tm_map(train_clean, removePunctuation)
+train_clean <- tm_map(train_clean, stemDocument)
+train_clean <- tm_map(train_clean, stripWhitespace)
+#TEST
+test_clean <- tm_map(test, content_transformer(tolower))
+test_clean <- tm_map(test_clean, removeNumbers)
+test_clean <- tm_map(test_clean, removeWords, stopwords())
+test_clean <- tm_map(test_clean, removePunctuation)
+test_clean <- tm_map(test_clean, stemDocument)
+test_clean <- tm_map(test_clean, stripWhitespace)
+
+#BUILDING WORD CLOUD AND FREQ WORDS
+
+ham_train_clean <- tm_map(ham_train, content_transformer(tolower))
+ham_train_clean <- tm_map(ham_train_clean, removeNumbers)
+ham_train_clean <- tm_map(ham_train_clean, removeWords, stopwords())
+ham_train_clean <- tm_map(ham_train_clean, removePunctuation)
+ham_train_clean <- tm_map(ham_train_clean, stemDocument)
+ham_train_clean <- tm_map(ham_train_clean, stripWhitespace)
+
+spam_train_clean <- tm_map(spam_train, content_transformer(tolower))
+spam_train_clean <- tm_map(spam_train_clean, removeNumbers)
+spam_train_clean <- tm_map(spam_train_clean, removeWords, stopwords())
+spam_train_clean <- tm_map(spam_train_clean, removePunctuation)
+spam_train_clean <- tm_map(spam_train_clean, stemDocument)
+spam_train_clean <- tm_map(spam_train_clean, stripWhitespace)
+
+
+wordcloud(spam_train_clean, min.freq = 20, random.order = FALSE)
+wordcloud(ham_train_clean, min.freq = 50, random.order = FALSE)
+
+#DATA PREPARATION - SPLITTING TEXT DOCUMENTS INTO WORDS
+#TRAIN
+train_dtm <- DocumentTermMatrix(train_clean)
+
+#TEST
+test_dtm  <- DocumentTermMatrix(test_clean)
+
+#FILTER TO INCLUDE SPECIFIC WORDS
+#TRAIN
+train_freq_words <-findFreqTerms(train_dtm, 30)
+dtm_freq_train   <- train_dtm[ , train_freq_words]
+
+#TEST
+
+dtm_freq_test   <- test_dtm[ , train_freq_words]
+
+#TO CHANGE NUMERIC VALUES IN SPARSE MATRIX
+#TRAIN
+convert_counts <- function(x) { x <- ifelse(x > 0, "Yes", "No")}
+email_train    <- apply(dtm_freq_train, MARGIN = 2, convert_counts)
+#TEST
+convert_counts <- function(x) { x <- ifelse(x > 0, "Yes", "No")}
+email_test     <- apply(dtm_freq_test, MARGIN = 2, convert_counts)
+
+#STEP 3 - TRAINING THE MODEL ON DATA
+email_classifier <- naiveBayes(email_train, l)
+
+#STEP 4 – EVALUATING MODEL PERFORMANCE
+email_test_pred <- predict(email_classifier, email_test)
+CrossTable(email_test_pred, l2, prop.chisq = FALSE, prop.t = FALSE, dnn = c('predicted', 'actual'))
+
+#STEP 5 – IMPROVING MODEL PERFORMANCE
+email_classifier1 <- naiveBayes(email_train, l, laplace = 1)
+email_test_pred2  <- predict(email_classifier1, email_test)
+CrossTable(email_test_pred2, l2, prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE, dnn = c('predicted', 'actual'))
+
+
+savehistory("~/Documents/UIS/SPRING2017/Machine Learning/Assignment/Assignment2/Script.txt")
